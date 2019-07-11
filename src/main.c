@@ -6,6 +6,11 @@
 #define BYTE 8
 #define BYTES(a) (a * BYTE)
 
+int STRACE = 0;
+int BREAK = 0;
+int REGS = 0;
+int FUNCS = 0;
+
 typedef enum regs {
 	X0 = 0, X1, X2, X3,
 	X4, X5, X6, X7,
@@ -49,14 +54,14 @@ const int instructions[] = {
 	EX
 };
 */
-uint64_t instructions[1024];
+uint64_t instructions[4096];
 
 typedef struct Label {
 	char 		l[17];
 	uint64_t* 	addr;
 } label;
 
-label labels[128];
+label labels[512];
 int label_count = 0;
 
 uint64_t 	registers[NUM_REGS];
@@ -64,7 +69,7 @@ uint64_t 	registers[NUM_REGS];
 #define sp registers[SP]
 #define pc registers[PC]
 
-#define STACK_SIZE 32
+#define STACK_SIZE 256
 uint64_t 	stack[STACK_SIZE];
 
 #define push(arg) ((*(uint64_t*)(sp -= BYTE)) = arg)
@@ -84,6 +89,51 @@ void 	printStack();
 void 	printRegs();
 
 int main(int argc, char* argv[]) {
+	if(argc == 3) {
+		switch(argv[2][1]) {
+			case 's': {STRACE = 1;} break;
+			case 'b': {BREAK = 1;} break;
+			case 'r': {REGS = 1;} break;
+			case 'f': {FUNCS = 1;} break;
+		}
+	} else if(argc == 4) {
+		switch(argv[2][1]) {
+			case 's': {STRACE = 1;} break;
+			case 'b': {BREAK = 1;} break;
+			case 'r': {REGS = 1;} break;
+			case 'f': {FUNCS = 1;} break;
+		}
+		switch(argv[3][1]) {
+			case 's': {STRACE = 1;} break;
+			case 'b': {BREAK = 1;} break;
+			case 'r': {REGS = 1;} break;
+			case 'f': {FUNCS = 1;} break;
+		}
+	} else if(argc == 5) {
+		   switch(argv[2][1]) {
+			   case 's': {STRACE = 1;} break;
+			   case 'b': {BREAK = 1;} break;
+			   case 'r': {REGS = 1;} break;
+			   case 'f': {FUNCS = 1;} break;
+		   }
+		   switch(argv[3][1]) {
+			   case 's': {STRACE = 1;} break;
+			   case 'b': {BREAK = 1;} break;
+			   case 'r': {REGS = 1;} break;
+			   case 'f': {FUNCS = 1;} break;
+		   }
+		   switch(argv[4][1]) {
+			   case 's': {STRACE = 1;} break;
+			   case 'b': {BREAK = 1;} break;
+			   case 'r': {REGS = 1;} break;
+			   case 'f': {FUNCS = 1;} break;
+		   }
+	} else if(argc == 6) {
+		STRACE = 1;
+		BREAK = 1;
+		REGS = 1;
+		FUNCS = 1;
+	}
 	printf("0x%016llx\n", (uint64_t)instructions);
 	sp = (uint64_t)(stack + STACK_SIZE);
 	char c;
@@ -94,9 +144,15 @@ int main(int argc, char* argv[]) {
 	while(executing > 0) {
 		printInstr(*(uint64_t*)pc);
 		exec();
-		printRegs();
-		printStack();
-		scanf("%c", &c);
+		if(REGS) {
+			printRegs();
+		}
+		if(STRACE) {
+			printStack();
+		}
+		if(BREAK) {
+			scanf("%c", &c);
+		}
 		pc += BYTE;
 	}
 

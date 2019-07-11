@@ -137,7 +137,9 @@ int interpret(char* file) {
 		if(instructions[count] == L) {
 			handle_label(temp, count);
 		}
-		printInstr(instructions[count]);
+		if(FUNCS) {
+			printInstr(instructions[count]);
+		}
 		pc += BYTE;
 		++count;
 	}
