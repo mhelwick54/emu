@@ -4,25 +4,29 @@
 #define SEPARATOR "---------------------------------------------------------------------------\n"
 
 #define BYTE 8
-
-typedef enum set {
-	STR = 9,//STR [REG]							REG -> stack
-	LDR,	//LDR [REG] [VAL]					VAL -> REG
-	ADD,	//ADD [DEST_REG] [REGA] [REGB]		DEST_REG = REGA + REGB
-	SUB,	//SUB [DEST_REG] [REGA] [REGB]		DEST_REG = REGA - REGB
-	PSH,	//PSH [VAL]							VAL -> stack
-	POP,	//POP								stack ->
-	BR,		//BR [PC_ADDR]						pc -> PC_ADDR
-	EX,		//EX								pc -> stack
-	SAV,	//SAV								pc -> stack
-	END
-} InstrSet;
+#define BYTES(a) (a * BYTE)
 
 typedef enum regs {
 	X0 = 0, X1, X2, X3,
 	X4, X5, X6, X7,
+	PC, SP,
 	NUM_REGS
 } Registers;
+
+typedef enum set {
+	STR = NUM_REGS + 1,						//STR [REG]							REG -> stack
+	LDR,									//LDR [REG] [VAL]					VAL -> REG
+	ADD,									//ADD [DEST_REG] [REGA] [REGB]		DEST_REG = REGA + REGB
+	SUB,									//SUB [DEST_REG] [REGA] [REGB]		DEST_REG = REGA - REGB
+	PSH,									//PSH [VAL]							VAL -> stack
+	POP,									//POP								stack ->
+	BR,										//BR [PC_ADDR]						pc -> PC_ADDR
+	EX,										//EX								pc -> stack
+	SAV,									//SAV								pc -> stack
+	END
+} InstrSet;
+
+uint64_t L = -1;
 
 /*
 const int instructions[] = {
@@ -47,16 +51,25 @@ const int instructions[] = {
 */
 uint64_t instructions[1024];
 
-#define STACK_SIZE 32
-uint64_t 	stack[STACK_SIZE];
-uint64_t* 	sp = stack + STACK_SIZE;
+typedef struct Label {
+	char 		l[17];
+	uint64_t* 	addr;
+} label;
+
+label labels[128];
+int label_count = 0;
 
 uint64_t 	registers[NUM_REGS];
 
-#define push(arg) ((*(--sp)) = arg)
-#define pop() (*(sp++))
+#define sp registers[SP]
+#define pc registers[PC]
 
-uint64_t* 	pc;
+#define STACK_SIZE 32
+uint64_t 	stack[STACK_SIZE];
+
+#define push(arg) ((*(uint64_t*)(sp -= BYTE)) = arg)
+#define pop() (sp += BYTE, (*(uint64_t*)(sp - BYTE)))
+
 int 		executing = 1;
 
 void exec();
@@ -64,59 +77,60 @@ void branch(uint64_t* new_addr);
 
 //forward declarations
 uint64_t 	match(char* s);
-void 		interpret(uint64_t* instr, char* file);
+int 		interpret(char* file);
 
 void 	printInstr(int instr);
 void 	printStack();
 void 	printRegs();
 
 int main(int argc, char* argv[]) {
+	printf("0x%016llx\n", (uint64_t)instructions);
+	sp = (uint64_t)(stack + STACK_SIZE);
 	char c;
-	interpret(instructions, argv[1]);
-	if(instructions == NULL) {
+	if(interpret(argv[1]) < 0) {
 		return -1;
 	}
-	pc = instructions;
+	pc = (uint64_t)instructions;
 	while(executing > 0) {
-		printInstr(*pc);
+		printInstr(*(uint64_t*)pc);
 		exec();
 		printRegs();
 		printStack();
 		scanf("%c", &c);
-		++pc;
+		pc += BYTE;
 	}
 
 	return 0;
 }
 
 void exec() {
-	switch(*pc) {
+	switch(*(uint64_t*)pc) {
 		case STR: {
-			push(registers[*(++pc)]);
+			push(registers[*(uint64_t*)(pc += BYTES(1))]);
 		}
 			break;
 		case LDR: {
-			registers[*(pc + 1)] = *(pc + 2);
-			pc += 2;
+			registers[*(uint64_t*)(pc + BYTES(1))] = *(uint64_t*)(pc + BYTES(2));
+			pc += BYTES(2);
 		}
 			break;
 		case ADD: {
-			registers[*(pc + 1)] = registers[*(pc + 2)] + registers[*(pc + 3)];
-			pc += 3;
+			registers[*(uint64_t*)(pc + BYTES(1))] = registers[*(uint64_t*)(pc + BYTES(2))] + registers[*(uint64_t*)(pc + BYTES(3))];
+			pc += BYTES(3);
 		}
 			break;
 		case SUB: {
-			registers[*(pc + 1)] = registers[*(pc + 2)] - registers[*(pc + 3)];
-			pc += 3;
+			registers[*(uint64_t*)(pc + BYTES(1))] = registers[*(uint64_t*)(pc + BYTES(2))] + registers[*(uint64_t*)(pc + BYTES(3))];
+			pc += BYTES(3);
 		}
 			break;
-		case PSH: push(*(++pc));
+		case PSH: push(*(uint64_t*)(pc += BYTES(1)));
 			break;
 		case POP: pop();
 			break;
-		case BR: branch(instructions + *(++pc));
+		case BR: branch(instructions + *(uint64_t*)(pc += BYTES(1)));
 			break;
-		case EX: branch((uint64_t*)(pop() + (2 * BYTE)));
+		case EX: branch((uint64_t*)(pop() + BYTES(2)));
 			break;
 		case SAV: push((uint64_t)pc);
 			break;
@@ -128,7 +142,7 @@ void exec() {
 }
 
 void branch(uint64_t* new_addr) {
-	pc = new_addr;
+	pc = (uint64_t)new_addr;
 }
 
 #include "funcs.h"
