@@ -14,6 +14,8 @@ int FUNCS = 0;
 typedef enum regs {
 	X0 = 0, X1, X2, X3,
 	X4, X5, X6, X7,
+	X8, X9, X10, X11,
+	X12, X13, X14, X15,
 	PC, SP,
 	NUM_REGS
 } Registers;
@@ -28,32 +30,10 @@ typedef enum set {
 	BR,										//BR [PC_ADDR]						pc -> PC_ADDR
 	EX,										//EX								pc -> stack
 	SAV,									//SAV								pc -> stack
-	END
+	END,
+	L = -1									//function label
 } InstrSet;
 
-uint64_t L = -1;
-
-/*
-const int instructions[] = {
-	LDR, X0, 2,
-	LDR, X1, 5,
-	ADD, X2, X0, X1,
-	PSH, 1,
-	STR, X2,
-	LDR, X3, 1,
-	SUB, X7, X2, X3,
-	POP,
-	PSH, 2,
-	STR, X7,
-	SAV,
-	BR, 29,
-	END,
-	LDR, X5, 10,
-	LDR, X6, 10,
-	ADD, X5, X5, X6,
-	EX
-};
-*/
 uint64_t instructions[4096];
 
 typedef struct Label {
