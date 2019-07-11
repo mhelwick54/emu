@@ -193,6 +193,22 @@ void printInstr(int instr) {
 			break;
 		case X7: printf("X7 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
 			break;
+		case X8: printf("X8 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+			break;
+		case X9: printf("X9 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+			break;
+		case X10: printf("X10 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+			break;
+		case X11: printf("X11 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+			break;
+		case X12: printf("X12 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+			break;
+		case X13: printf("X13 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+			break;
+		case X14: printf("X14 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+			break;
+		case X15: printf("X15 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+			break;
 		default: printf("%d 0x%016llx\n", instr, (uint64_t)pc - (uint64_t)instructions);
 	}
 }
