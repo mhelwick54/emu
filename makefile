@@ -1,5 +1,5 @@
 TARGET=emu
-CFLAGS=-Wall -Wno-unused-variable -Wno-unused-value
+CFLAGS=-Wall -Wno-unused-variable -Wno-unused-value -ffreestanding
 LDFLAGS=-Iinclude
 
 UNAME_S := $(shell uname -s)

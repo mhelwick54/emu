@@ -32,6 +32,14 @@ int strcmp(char* s1, char* s2) {
 	}
 }
 
+void strcpy(char* dest, char* src) {
+	char* ptr = dest;
+	while(*src != '\0') {
+		*ptr++ = *src++;
+	}
+	*ptr = '\0';
+}
+
 uint64_t match(char* s) {
 	if(strcmp(s, "STR")) {
 		return STR;
@@ -70,31 +78,79 @@ uint64_t match(char* s) {
 	} else if(strcmp(s, "X7")) {
 		return X7;
 	} else {
-		return atoi(s);
+		if(s[0] >= '0' && s[0] <= '9') {
+			return atoi(s);
+		} else {
+			return L;
+		}
 	}
 }
 
-void interpret(uint64_t* instr, char* file) {
+int find_jump(char* l) {
+	int i = 0;
+	for(i = 0; i < label_count; ++i) {
+		if(strcmp(l, labels[i].l) == 1) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+void trim_flag(char* s) {
+	char* ptr = s;
+	while(*ptr != '\0') {
+		*ptr = *(ptr + 1);
+		++ptr;
+	}
+}
+
+void handle_label(char* temp, int count) {
+	if(temp[0] == '-') {
+		trim_flag(temp);
+		int label_num = find_jump(temp);
+		labels[label_num].addr = (uint64_t*)((uint64_t*)pc - instructions);
+	} else {
+		instructions[count] = L - 1;
+		strcpy(labels[label_count].l, temp);
+		label_count++;
+	}
+}
+
+int interpret(char* file) {
+	pc = (uint64_t)instructions;
 	FILE* f = fopen(file, "r");
 	if(!f) {
 		printf("%s: file not found\n", file);
-		instr = NULL;
-		return;
+		return -1;
 	}
 	char temp[64 + 1];
 	int count = 0;
 	while(1) {
 		fscanf(f, "%64s", temp);
 		if(temp[0] == '*') {
-			return;
+			break;
 		}
 		if(count == MAX_INSTR) {
-			return;
+			break;
 		}
-		instr[count] = match(temp);
-		printInstr(instr[count]);
+		instructions[count] = match(temp);
+		if(instructions[count] == L) {
+			handle_label(temp, count);
+		}
+		printInstr(instructions[count]);
+		pc += BYTE;
 		++count;
 	}
+	count--;
+	label_count--;
+	while(count >= 0) {
+		if(instructions[count] == L - 1) {
+			instructions[count] = (uint64_t)labels[label_count].addr;
+			label_count--;
+		}
+		count--;
+	}
+	return 1;
 }
 
 void printInstr(int instr) {
@@ -146,7 +202,7 @@ void printStack() {
 	printf("Stack\n");
 	while(ptr != stack + STACK_SIZE) {
 		printf("0x%016llx ", *ptr);
-		if(ptr == sp) {
+		if(ptr == (uint64_t*)sp) {
 			stackPtr = i % 4;
 		}
 		++i;
@@ -172,7 +228,7 @@ void printRegs() {
 	printf("%sRegisters\n", SEPARATOR);
 	uint64_t* ptr = registers;
 	int i = 0;
-	while(ptr != registers + NUM_REGS) {
+	while(ptr != registers + NUM_REGS - 2) {
 		printf("0x%016llx ", *ptr);
 		++i;
 		if(i % 4 == 0) {
@@ -180,6 +236,9 @@ void printRegs() {
 		}
 		++ptr;
 	}
+	printf("PC:      0x%064llx\n", *ptr);
+	ptr++;
+	printf("SP:      0x%064llx\n", *ptr);
 	printf("%s", SEPARATOR);
 }
 
