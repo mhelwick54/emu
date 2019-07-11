@@ -32,6 +32,9 @@ LIB=$(patsubst %,-l%,$(_LIB))
 
 all: $(BDIR)/$(TARGET)
 
+pre:
+	$(CC) $(LDFLAGS) -E $(SRC) -o pre.c
+
 info:
 	$(info DEPS is $(DEPS))
 	$(info SRC is $(SRC))

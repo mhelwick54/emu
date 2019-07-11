@@ -49,7 +49,7 @@ uint64_t instructions[1024];
 
 #define STACK_SIZE 32
 uint64_t 	stack[STACK_SIZE];
-uint64_t 	sp = stack + STACK_SIZE;
+uint64_t* 	sp = stack + STACK_SIZE;
 
 uint64_t 	registers[NUM_REGS];
 
