@@ -49,7 +49,7 @@ uint64_t 	registers[NUM_REGS];
 #define sp registers[SP]
 #define pc registers[PC]
 
-#define STACK_SIZE 256
+#define STACK_SIZE 1024
 uint64_t 	stack[STACK_SIZE];
 
 #define push(arg) ((*(uint64_t*)(sp -= BYTE)) = arg)

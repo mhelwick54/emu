@@ -125,6 +125,7 @@ int interpret(char* file) {
 	}
 	char temp[64 + 1];
 	int count = 0;
+	uint64_t opcode, op1, op2, op3, op4;
 	while(1) {
 		fscanf(f, "%64s", temp);
 		if(temp[0] == '*') {
@@ -133,6 +134,7 @@ int interpret(char* file) {
 		if(count == MAX_INSTR) {
 			break;
 		}
+		instr_type = match(temp);
 		instructions[count] = match(temp);
 		if(instructions[count] == L) {
 			handle_label(temp, count);

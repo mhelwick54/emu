@@ -35,6 +35,9 @@ all: $(BDIR)/$(TARGET)
 pre:
 	$(CC) $(LDFLAGS) -E $(SRC) -o pre.c
 
+calc:
+	$(CC) $(CFLAGS) $(LDFLAGS) $(SDIR)/calc_mem_layout.c -o $(BDIR)/calc
+
 info:
 	$(info DEPS is $(DEPS))
 	$(info SRC is $(SRC))
