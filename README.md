@@ -43,6 +43,7 @@ PC: program counter, points to current instruction
 SP: stack pointer, points to minimum stack byte in current use
 
 #### Memory
+Address are relative. Base will be the base address of the `memory` array when program is loaded.
 |	Section				|	Hex Address	|	Binary Address		|
 |---------------|-------------|-------------------|
 |	Stack					|	`0xFFF`			|	`1111 1111 1111`	|
