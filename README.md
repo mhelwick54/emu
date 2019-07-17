@@ -37,7 +37,9 @@ Option flags:
 ### Architecture
 #### Registers
 X0 - X15: general purpose registers
+
 PC: program counter, points to current instruction
+
 SP: stack pointer, points to minimum stack byte in current use
 
 #### Memory
