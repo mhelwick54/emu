@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include "mem_structure.h"
+
 #define SEPARATOR "---------------------------------------------------------------------------\n"
 
 #define BYTE 8
@@ -10,6 +12,7 @@ int STRACE = 0;
 int BREAK = 0;
 int REGS = 0;
 int FUNCS = 0;
+int MEM = 0;
 
 typedef enum regs {
 	X0 = 0, X1, X2, X3,
@@ -34,8 +37,6 @@ typedef enum set {
 	L = -1									//function label
 } InstrSet;
 
-uint64_t instructions[4096];
-
 typedef struct Label {
 	char 		l[17];
 	uint64_t* 	addr;
@@ -49,11 +50,8 @@ uint64_t 	registers[NUM_REGS];
 #define sp registers[SP]
 #define pc registers[PC]
 
-#define STACK_SIZE 1024
-uint64_t 	stack[STACK_SIZE];
-
-#define push(arg) ((*(uint64_t*)(sp -= BYTE)) = arg)
-#define pop() (sp += BYTE, (*(uint64_t*)(sp - BYTE)))
+#define push(arg) ((*(uint64_t*)(sp -= WORD_BYTES)) = arg)
+#define pop() (sp += WORD_BYTES, (*(uint64_t*)(sp - WORD_BYTES)))
 
 int 		executing = 1;
 
@@ -64,63 +62,24 @@ void branch(uint64_t* new_addr);
 uint64_t 	match(char* s);
 int 		interpret(char* file);
 
-void 	printInstr(int instr);
+void 	printInstr(WORD instr);
 void 	printStack();
 void 	printRegs();
 
+void setFlags(int argc, char* argv[]);
+
 int main(int argc, char* argv[]) {
-	if(argc == 3) {
-		switch(argv[2][1]) {
-			case 's': {STRACE = 1;} break;
-			case 'b': {BREAK = 1;} break;
-			case 'r': {REGS = 1;} break;
-			case 'f': {FUNCS = 1;} break;
-		}
-	} else if(argc == 4) {
-		switch(argv[2][1]) {
-			case 's': {STRACE = 1;} break;
-			case 'b': {BREAK = 1;} break;
-			case 'r': {REGS = 1;} break;
-			case 'f': {FUNCS = 1;} break;
-		}
-		switch(argv[3][1]) {
-			case 's': {STRACE = 1;} break;
-			case 'b': {BREAK = 1;} break;
-			case 'r': {REGS = 1;} break;
-			case 'f': {FUNCS = 1;} break;
-		}
-	} else if(argc == 5) {
-		   switch(argv[2][1]) {
-			   case 's': {STRACE = 1;} break;
-			   case 'b': {BREAK = 1;} break;
-			   case 'r': {REGS = 1;} break;
-			   case 'f': {FUNCS = 1;} break;
-		   }
-		   switch(argv[3][1]) {
-			   case 's': {STRACE = 1;} break;
-			   case 'b': {BREAK = 1;} break;
-			   case 'r': {REGS = 1;} break;
-			   case 'f': {FUNCS = 1;} break;
-		   }
-		   switch(argv[4][1]) {
-			   case 's': {STRACE = 1;} break;
-			   case 'b': {BREAK = 1;} break;
-			   case 'r': {REGS = 1;} break;
-			   case 'f': {FUNCS = 1;} break;
-		   }
-	} else if(argc == 6) {
-		STRACE = 1;
-		BREAK = 1;
-		REGS = 1;
-		FUNCS = 1;
+	setFlags(argc, argv);
+	if(MEM) {
+		printMemStruct();
+		printf("Text: "HEX, (uint64_t)TEXT);
 	}
-	printf("0x%016llx\n", (uint64_t)instructions);
-	sp = (uint64_t)(stack + STACK_SIZE);
+	sp = STACK_TOP;
 	char c;
 	if(interpret(argv[1]) < 0) {
 		return -1;
 	}
-	pc = (uint64_t)instructions;
+	pc = (WORD)TEXT;
 	while(executing > 0) {
 		printInstr(*(uint64_t*)pc);
 		exec();
@@ -140,33 +99,35 @@ int main(int argc, char* argv[]) {
 }
 
 void exec() {
-	switch(*(uint64_t*)pc) {
+	uint16_t opcode = extractOpcode((WORD*)pc);
+	uint16_t op1 = extractOp((WORD*)pc, 1);
+	uint16_t op2 = extractOp((WORD*)pc, 2);
+	uint16_t op3 = extractOp((WORD*)pc, 3);
+	printf("0x%04x 0x%04x 0x%04x 0x%04x\n", opcode, op1, op2, op3);
+	switch(opcode + INSTR_OFFSET) {
 		case STR: {
-			push(registers[*(uint64_t*)(pc += BYTES(1))]);
+			push(op1);
 		}
 			break;
 		case LDR: {
-			registers[*(uint64_t*)(pc + BYTES(1))] = *(uint64_t*)(pc + BYTES(2));
-			pc += BYTES(2);
+			registers[op1] = op2;
 		}
 			break;
 		case ADD: {
-			registers[*(uint64_t*)(pc + BYTES(1))] = registers[*(uint64_t*)(pc + BYTES(2))] + registers[*(uint64_t*)(pc + BYTES(3))];
-			pc += BYTES(3);
+			registers[op1] = registers[op2] + registers[op3];
 		}
 			break;
 		case SUB: {
-			registers[*(uint64_t*)(pc + BYTES(1))] = registers[*(uint64_t*)(pc + BYTES(2))] + registers[*(uint64_t*)(pc + BYTES(3))];
-			pc += BYTES(3);
+			registers[op1] = registers[op2] + registers[op3];
 		}
 			break;
-		case PSH: push(*(uint64_t*)(pc += BYTES(1)));
+		case PSH: push(op1);
 			break;
 		case POP: pop();
 			break;
-		case BR: branch(instructions + *(uint64_t*)(pc += BYTES(1)));
+		case BR: branch((WORD*)(TEXT + op1));
 			break;
-		case EX: branch((uint64_t*)(pop() + BYTES(2)));
+		case EX: branch((WORD*)pop());
 			break;
 		case SAV: push((uint64_t)pc);
 			break;
@@ -179,6 +140,90 @@ void exec() {
 
 void branch(uint64_t* new_addr) {
 	pc = (uint64_t)new_addr;
+}
+
+void setFlags(int argc, char* argv[]) {
+	if(argc == 3) {
+		switch(argv[2][1]) {
+			case 's': {STRACE = 1;} break;
+			case 'b': {BREAK = 1;} break;
+			case 'r': {REGS = 1;} break;
+			case 'f': {FUNCS = 1;} break;
+			case 'm': {MEM = 1;} break;
+		}
+	} else if(argc == 4) {
+		switch(argv[2][1]) {
+			case 's': {STRACE = 1;} break;
+			case 'b': {BREAK = 1;} break;
+			case 'r': {REGS = 1;} break;
+			case 'f': {FUNCS = 1;} break;
+			case 'm': {MEM = 1;} break;
+		}
+		switch(argv[3][1]) {
+			case 's': {STRACE = 1;} break;
+			case 'b': {BREAK = 1;} break;
+			case 'r': {REGS = 1;} break;
+			case 'f': {FUNCS = 1;} break;
+			case 'm': {MEM = 1;} break;
+		}
+	} else if(argc == 5) {
+		   switch(argv[2][1]) {
+			   case 's': {STRACE = 1;} break;
+			   case 'b': {BREAK = 1;} break;
+			   case 'r': {REGS = 1;} break;
+			   case 'f': {FUNCS = 1;} break;
+			   case 'm': {MEM = 1;} break;
+		   }
+		   switch(argv[3][1]) {
+			   case 's': {STRACE = 1;} break;
+			   case 'b': {BREAK = 1;} break;
+			   case 'r': {REGS = 1;} break;
+			   case 'f': {FUNCS = 1;} break;
+			   case 'm': {MEM = 1;} break;
+		   }
+		   switch(argv[4][1]) {
+			   case 's': {STRACE = 1;} break;
+			   case 'b': {BREAK = 1;} break;
+			   case 'r': {REGS = 1;} break;
+			   case 'f': {FUNCS = 1;} break;
+			   case 'm': {MEM = 1;} break;
+		   }
+	} else if(argc == 6) {
+		   switch(argv[2][1]) {
+			   case 's': {STRACE = 1;} break;
+			   case 'b': {BREAK = 1;} break;
+			   case 'r': {REGS = 1;} break;
+			   case 'f': {FUNCS = 1;} break;
+			   case 'm': {MEM = 1;} break;
+		   }
+		   switch(argv[3][1]) {
+			   case 's': {STRACE = 1;} break;
+			   case 'b': {BREAK = 1;} break;
+			   case 'r': {REGS = 1;} break;
+			   case 'f': {FUNCS = 1;} break;
+			   case 'm': {MEM = 1;} break;
+		   }
+		   switch(argv[4][1]) {
+			   case 's': {STRACE = 1;} break;
+			   case 'b': {BREAK = 1;} break;
+			   case 'r': {REGS = 1;} break;
+			   case 'f': {FUNCS = 1;} break;
+			   case 'm': {MEM = 1;} break;
+		   }
+		   switch(argv[5][1]) {
+			   case 's': {STRACE = 1;} break;
+			   case 'b': {BREAK = 1;} break;
+			   case 'r': {REGS = 1;} break;
+			   case 'f': {FUNCS = 1;} break;
+			   case 'm': {MEM = 1;} break;
+		   }
+	} else if(argc == 7) {
+		STRACE = 1;
+		BREAK = 1;
+		REGS = 1;
+		FUNCS = 1;
+		MEM = 1;
+	}
 }
 
 #include "funcs.h"

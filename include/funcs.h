@@ -1,7 +1,9 @@
 #ifndef FUNCS_H
 #define FUNCS_H
 
-#define MAX_INSTR 1024
+#include "mem_structure.h"
+
+#define MAX_INSTR (TEXT_SIZE / WORD_BYTES)
 
 uint64_t atoi(char* s) {
 	uint64_t ret = 0;
@@ -108,16 +110,69 @@ void handle_label(char* temp, int count) {
 	if(temp[0] == '-') {
 		trim_flag(temp);
 		int label_num = find_jump(temp);
-		labels[label_num].addr = (uint64_t*)((uint64_t*)pc - instructions);
+		labels[label_num].addr = (uint64_t*)((uint64_t*)pc - TEXT);
 	} else {
-		instructions[count] = L - 1;
+		//TEXT[count] = L - 1;
 		strcpy(labels[label_count].l, temp);
 		label_count++;
 	}
 }
 
+void pushInstr(WORD type, FILE* f) {
+	char op1[64+1];
+	char op2[64+1];
+	char op3[64+1];
+	WORD instr = 0;
+	switch(type) {
+		case STR: {
+			fscanf(f, "%s", op1);
+			instr = constructInstr(type, match(op1), 0, 0);
+		}
+			break;
+		case LDR: {
+			fscanf(f, "%s", op1);
+			fscanf(f, "%s", op2);
+			instr = constructInstr(type, match(op1), match(op2), 0);
+		}
+			break;
+		case ADD: {
+			fscanf(f, "%s", op1);
+			fscanf(f, "%s", op2);
+			fscanf(f, "%s", op3);
+			instr = constructInstr(type, match(op1), match(op2), match(op3));
+		}
+			break;
+		case SUB: {
+			fscanf(f, "%s", op1);
+			fscanf(f, "%s", op2);
+			fscanf(f, "%s", op3);
+			instr = constructInstr(type, match(op1), match(op2), match(op3));
+		}
+			break;
+		case PSH: {
+			fscanf(f, "%s", op1);
+			instr = constructInstr(type, match(op1), 0, 0);
+		}
+			break;
+		case POP: { instr = constructInstr(type, 0, 0, 0); }
+			break;
+		case BR: {
+			fscanf(f, "%s", op1);
+			instr = constructInstr(type, match(op1), 0, 0);
+		}
+			break;
+		case EX: { instr = constructInstr(type, 0, 0, 0); }
+			break;
+		case SAV: { instr = constructInstr(type, 0, 0, 0); }
+			break;
+		case END: { instr = constructInstr(type, 0, 0, 0); }
+			break;
+	}
+	*(WORD*)pc = instr;
+}
+
 int interpret(char* file) {
-	pc = (uint64_t)instructions;
+	pc = TEXT;
 	FILE* f = fopen(file, "r");
 	if(!f) {
 		printf("%s: file not found\n", file);
@@ -134,93 +189,101 @@ int interpret(char* file) {
 		if(count == MAX_INSTR) {
 			break;
 		}
-		instr_type = match(temp);
-		instructions[count] = match(temp);
-		if(instructions[count] == L) {
+		pushInstr(match(temp), f);
+		/*TEXT[count] = match(temp);
+		if(TEXT[count] == L) {
 			handle_label(temp, count);
 		}
 		if(FUNCS) {
-			printInstr(instructions[count]);
-		}
-		pc += BYTE;
+			printInstr(TEXT[count]);
+		}*/
+		pc += WORD_BYTES;
 		++count;
 	}
 	count--;
 	label_count--;
-	while(count >= 0) {
-		if(instructions[count] == L - 1) {
-			instructions[count] = (uint64_t)labels[label_count].addr;
+	/*while(count >= 0) {
+		if(TEXT[count] == L - 1) {
+			TEXT[count] = (uint64_t)labels[label_count].addr;
 			label_count--;
 		}
 		count--;
-	}
+	}*/
 	return 1;
 }
 
-void printInstr(int instr) {
-	switch(instr) {
-		case STR: printf("STR 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+void printInstr(WORD instr) {
+	uint16_t opcode = extractOpcode((WORD*)pc);
+	uint16_t op1 = extractOp((WORD*)pc, 1);
+	uint16_t op2 = extractOp((WORD*)pc, 2);
+	uint16_t op3 = extractOp((WORD*)pc, 3);
+	switch(opcode + INSTR_OFFSET) {
+		case STR: printf("STR 0x%04x 0x%04x 0x%04x 0x%016llx\n", op1, op2, op3, (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case LDR: printf("LDR 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case LDR: printf("LDR 0x%04x 0x%04x 0x%04x 0x%016llx\n", op1, op2, op3, (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case ADD: printf("ADD 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case ADD: printf("ADD 0x%04x 0x%04x 0x%04x 0x%016llx\n", op1, op2, op3, (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case SUB: printf("SUB 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case SUB: printf("SUB 0x%04x 0x%04x 0x%04x 0x%016llx\n", op1, op2, op3, (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case PSH: printf("PSH 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case PSH: printf("PSH 0x%04x 0x%04x 0x%04x 0x%016llx\n", op1, op2, op3, (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case POP: printf("POP 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case POP: printf("POP 0x%04x 0x%04x 0x%04x 0x%016llx\n", op1, op2, op3, (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case BR: printf("BR 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case BR: printf("BR 0x%04x 0x%04x 0x%04x 0x%016llx\n", op1, op2, op3, (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case EX: printf("EX 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case EX: printf("EX 0x%04x 0x%04x 0x%04x 0x%016llx\n", op1, op2, op3, (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case SAV: printf("SAV 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case SAV: printf("SAV 0x%04x 0x%04x 0x%04x 0x%016llx\n", op1, op2, op3, (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case END: printf("END 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case END: printf("END 0x%04x 0x%04x 0x%04x 0x%016llx\n", op1, op2, op3, (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case X0: printf("X0 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case X0: printf("X0 0x%016llx\n", (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case X1: printf("X1 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case X1: printf("X1 0x%016llx\n", (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case X2: printf("X2 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case X2: printf("X2 0x%016llx\n", (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case X3: printf("X3 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case X3: printf("X3 0x%016llx\n", (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case X4: printf("X4 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case X4: printf("X4 0x%016llx\n", (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case X5: printf("X5 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case X5: printf("X5 0x%016llx\n", (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case X6: printf("X6 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case X6: printf("X6 0x%016llx\n", (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case X7: printf("X7 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case X7: printf("X7 0x%016llx\n", (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case X8: printf("X8 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case X8: printf("X8 0x%016llx\n", (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case X9: printf("X9 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case X9: printf("X9 0x%016llx\n", (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case X10: printf("X10 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case X10: printf("X10 0x%016llx\n", (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case X11: printf("X11 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case X11: printf("X11 0x%016llx\n", (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case X12: printf("X12 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case X12: printf("X12 0x%016llx\n", (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case X13: printf("X13 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case X13: printf("X13 0x%016llx\n", (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case X14: printf("X14 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case X14: printf("X14 0x%016llx\n", (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		case X15: printf("X15 0x%016llx\n", (uint64_t)pc - (uint64_t)instructions);
+		case X15: printf("X15 0x%016llx\n", (uint64_t)pc - (uint64_t)TEXT);
 			break;
-		default: printf("%d 0x%016llx\n", instr, (uint64_t)pc - (uint64_t)instructions);
+		default: printf("0x%016llx 0x%016llx\n", instr, (uint64_t)pc - (uint64_t)TEXT);
 	}
 }
 
 void printStack() {
 	int i = 0;
 	int stackPtr = -1;
-	uint64_t* ptr = stack;
+	//WORD* ptr = STACK_BOT;
+	WORD* ptr = (WORD*)sp - 1;
+	while((STACK_TOP - (WORD)ptr) % (4 * WORD_BYTES) != 0) {
+		ptr--;
+	}
 	printf("Stack\n");
-	while(ptr != stack + STACK_SIZE) {
+	while(ptr != (WORD*)STACK_TOP) {
 		printf("0x%016llx ", *ptr);
 		if(ptr == (uint64_t*)sp) {
 			stackPtr = i % 4;
