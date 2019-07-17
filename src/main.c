@@ -56,7 +56,7 @@ uint64_t 	registers[NUM_REGS];
 int 		executing = 1;
 
 void exec();
-void branch(uint64_t* new_addr);
+void branch(WORD new_addr);
 
 //forward declarations
 uint64_t 	match(char* s);
@@ -125,9 +125,11 @@ void exec() {
 			break;
 		case POP: pop();
 			break;
-		case BR: branch((WORD*)(TEXT + op1));
+		case BR: branch(getAddr((WORD*)pc));
 			break;
-		case EX: branch((WORD*)pop());
+		case EX: {
+			branch(pop() + WORD_BYTES);
+		}
 			break;
 		case SAV: push((uint64_t)pc);
 			break;
@@ -138,8 +140,8 @@ void exec() {
 	}
 }
 
-void branch(uint64_t* new_addr) {
-	pc = (uint64_t)new_addr;
+void branch(WORD new_addr) {
+	pc = new_addr;
 }
 
 void setFlags(int argc, char* argv[]) {

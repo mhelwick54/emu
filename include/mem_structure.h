@@ -73,6 +73,7 @@ WORD memory[MEM_SIZE];		//262,144 bits = 2^18 bits
 #define OP2_MASK	0x00000FFFF0000000
 #define OP3_MASK	0x000000000FFFF000
 #define EXTRA_MASK	0x0000000000000FFF
+#define ADDR_MASK	0x0FFFFFFFFFFFFFFF
 
 #define OPCODE_SIZE 4
 #define OP_SIZE 16
@@ -81,6 +82,7 @@ WORD memory[MEM_SIZE];		//262,144 bits = 2^18 bits
 #define OP1_SHIFT (OPCODE_SHIFT - OP_SIZE)
 #define OP2_SHIFT (OP1_SHIFT - OP_SIZE)
 #define OP3_SHIFT (OP2_SHIFT - OP_SIZE)
+#define ADDR_SHIFT (WORD_SIZE - OPCODE_SHIFT)
 
 #define INSTR_OFFSET 19
 
@@ -158,6 +160,10 @@ int extractOp(WORD* instr, int op) {
 		case 3: return SHIFTOUT(*instr, OP3_SHIFT, OP3_MASK);
 	}
 	return 0;
+}
+
+WORD getAddr(WORD* instr) {
+	return SHIFTOUT(*instr, OP3_SHIFT, ADDR_MASK);
 }
 
 void printMemStruct() {

@@ -100,22 +100,28 @@ int find_jump(char* l) {
 
 void trim_flag(char* s) {
 	char* ptr = s;
-	while(*ptr != '\0') {
+	while(*ptr != '\n') {
 		*ptr = *(ptr + 1);
 		++ptr;
 	}
+	*(ptr-1) = '\0';
 }
 
-void handle_label(char* temp, int count) {
-	if(temp[0] == '-') {
-		trim_flag(temp);
-		int label_num = find_jump(temp);
-		labels[label_num].addr = (uint64_t*)((uint64_t*)pc - TEXT);
-	} else {
-		//TEXT[count] = L - 1;
-		strcpy(labels[label_count].l, temp);
-		label_count++;
+void handle_label(char* temp) {
+	trim_flag(temp);
+	strcpy(labels[label_count].l, temp);
+	labels[label_count].addr = (WORD*)pc;
+	label_count++;
+}
+
+WORD match_label(char* l) {
+	int i = 0;
+	for(i = 0; i < label_count; ++i) {
+		if(strcmp(labels[i].l, l) == 1) {
+			return (WORD)labels[i].addr;
+		}
 	}
+	return TEXT_BOT;
 }
 
 void pushInstr(WORD type, FILE* f) {
@@ -158,7 +164,7 @@ void pushInstr(WORD type, FILE* f) {
 			break;
 		case BR: {
 			fscanf(f, "%s", op1);
-			instr = constructInstr(type, match(op1), 0, 0);
+			instr = constructInstr(type, 0, 0, match_label(op1));
 		}
 			break;
 		case EX: { instr = constructInstr(type, 0, 0, 0); }
@@ -171,7 +177,31 @@ void pushInstr(WORD type, FILE* f) {
 	*(WORD*)pc = instr;
 }
 
+int scan_labels(char* file) {
+	FILE* f = fopen(file, "r");
+	if(!f) {
+		printf("%s: file not found\n", file);
+		return -1;
+	}
+	pc = TEXT;
+	char temp[64+1];
+	while(1) {
+		fgets(temp, 64, f);
+		if(temp[0] == '*') {
+			break;
+		}
+		if(temp[0] == '-') {
+			handle_label(temp);
+		}
+		pc += WORD_BYTES;
+	}
+	return 1;
+}
+
 int interpret(char* file) {
+	if(scan_labels(file) < 0) {
+		return -1;
+	}
 	pc = TEXT;
 	FILE* f = fopen(file, "r");
 	if(!f) {
@@ -189,26 +219,16 @@ int interpret(char* file) {
 		if(count == MAX_INSTR) {
 			break;
 		}
-		pushInstr(match(temp), f);
-		/*TEXT[count] = match(temp);
-		if(TEXT[count] == L) {
-			handle_label(temp, count);
+		WORD type = match(temp);
+		if(type != L) {
+			pushInstr(type, f);
 		}
 		if(FUNCS) {
-			printInstr(TEXT[count]);
-		}*/
+			printInstr(*(WORD*)pc);
+		}
 		pc += WORD_BYTES;
 		++count;
 	}
-	count--;
-	label_count--;
-	/*while(count >= 0) {
-		if(TEXT[count] == L - 1) {
-			TEXT[count] = (uint64_t)labels[label_count].addr;
-			label_count--;
-		}
-		count--;
-	}*/
 	return 1;
 }
 
@@ -277,7 +297,6 @@ void printInstr(WORD instr) {
 void printStack() {
 	int i = 0;
 	int stackPtr = -1;
-	//WORD* ptr = STACK_BOT;
 	WORD* ptr = (WORD*)sp - 1;
 	while((STACK_TOP - (WORD)ptr) % (4 * WORD_BYTES) != 0) {
 		ptr--;
