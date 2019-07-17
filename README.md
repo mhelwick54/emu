@@ -33,6 +33,8 @@ Option flags:
 
 `END` - exits current program
 
+Maximum of 64 instructions.
+
 ### Architecture
 #### Registers
 X0 - X15: general purpose registers
