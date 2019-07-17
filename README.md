@@ -13,25 +13,25 @@ Option flags:
 * `-m`: prints a diagram of the memory sections
 
 ### Instruction Set
-STR [REG]
-* pushes the value in [REG] to the stack
-LDR [REG] [VAL]
-* places [VAL] in [REG]
-ADD [DEST_REG] [REGA] [REGB]
-* calculates [REGA] + [REGB] and places sum in [DEST_REG]
-SUB [DEST_REG] [REGA] [REGB]
-* calculates [REGA] - [REGB] and places sum in [DEST_REG]
-PSH [VAL]
-* pushes [VAL] to the stack
-POP
+`STR [REG]`
+* pushes the value in `[REG]` to the stack
+`LDR [REG] [VAL]`
+* places `[VAL]` in `[REG]`
+`ADD [DEST_REG] [REGA] [REGB]`
+* calculates `[REGA]` + `[REGB]` and places sum in `[DEST_REG]`
+`SUB [DEST_REG] [REGA] [REGB]`
+* calculates `[REGA]` - `[REGB]` and places sum in `[DEST_REG]`
+`PSH [VAL]`
+* pushes `[VAL]` to the stack
+`POP`
 * pops the last value from the stack (increment SP)
-BR [PC_ADDR]
-* changes PC to [PC_ADDR]
-EX
+`BR [PC_ADDR]`
+* changes PC to `[PC_ADDR]`
+`EX`
 * pops the last value from the stack (from previous save) and sets PC to popped value
-SAV
+`SAV`
 * pushes the current PC to the stack
-END
+`END`
 * exits current program
 
 ### Architecture
@@ -43,8 +43,8 @@ SP: stack pointer, points to minimum stack byte in current use
 #### Memory
 |	Section				|	Hex Address	|	Binary Address		|
 |---------------|-------------|-------------------|
-|	Stack					|	0xFFF				|	1111 1111 1111		|
-|	Heap					|	0x0FF				|	0000 1111 1111		|
-|	Data					|	0x07F				|	0000 0111 1111		|
-|	Text					|	0x03F				|	0000 0011 1111		|
-|	Base					|	0x000				|	0000 0000 0000		|
+|	Stack					|	`0xFFF`			|	`1111 1111 1111`	|
+|	Heap					|	`0x0FF`			|	`0000 1111 1111`	|
+|	Data					|	`0x07F`			|	`0000 0111 1111`	|
+|	Text					|	`0x03F`			|	`000 0011 1111`		|
+|	Base					|	`0x000`			|	`0000 0000 0000`	|
