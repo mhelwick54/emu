@@ -14,14 +14,23 @@ Option flags:
 
 ### Instruction Set
 `STR [REG]` - pushes the value in `[REG]` to the stack
+
 `LDR [REG] [VAL]` - places `[VAL]` in `[REG]`
+
 `ADD [DEST_REG] [REGA] [REGB]` - calculates `[REGA]` + `[REGB]` and places sum in `[DEST_REG]`
+
 `SUB [DEST_REG] [REGA] [REGB]` - calculates `[REGA]` - `[REGB]` and places sum in `[DEST_REG]`
+
 `PSH [VAL]` - pushes `[VAL]` to the stack
+
 `POP` - pops the last value from the stack (increment SP)
+
 `BR [PC_ADDR]` - changes PC to `[PC_ADDR]`
+
 `EX` - pops the last value from the stack (from previous save) and sets PC to popped value
+
 `SAV` - pushes the current PC to the stack
+
 `END` - exits current program
 
 ### Architecture
