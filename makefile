@@ -18,7 +18,7 @@ SDIR=src
 BDIR=bin
 LDIR=lib
 
-_DEPS=funcs.h
+_DEPS=funcs.h mem_structure.h compiler.h globals.h
 DEPS=$(patsubst %,$(IDIR)/%,$(_DEPS))
 
 _SRC=main.c

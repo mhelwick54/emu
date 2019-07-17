@@ -1,72 +1,10 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include "compiler.h"
 #include "mem_structure.h"
-
-#define SEPARATOR "---------------------------------------------------------------------------\n"
-
-#define BYTE 8
-#define BYTES(a) (a * BYTE)
-
-int STRACE = 0;
-int BREAK = 0;
-int REGS = 0;
-int FUNCS = 0;
-int MEM = 0;
-
-typedef enum regs {
-	X0 = 0, X1, X2, X3,
-	X4, X5, X6, X7,
-	X8, X9, X10, X11,
-	X12, X13, X14, X15,
-	PC, SP,
-	NUM_REGS
-} Registers;
-
-typedef enum set {
-	STR = NUM_REGS + 1,						//STR [REG]							REG -> stack
-	LDR,									//LDR [REG] [VAL]					VAL -> REG
-	ADD,									//ADD [DEST_REG] [REGA] [REGB]		DEST_REG = REGA + REGB
-	SUB,									//SUB [DEST_REG] [REGA] [REGB]		DEST_REG = REGA - REGB
-	PSH,									//PSH [VAL]							VAL -> stack
-	POP,									//POP								stack ->
-	BR,										//BR [PC_ADDR]						pc -> PC_ADDR
-	EX,										//EX								pc -> stack
-	SAV,									//SAV								pc -> stack
-	END,
-	L = -1									//function label
-} InstrSet;
-
-typedef struct Label {
-	char 		l[17];
-	uint64_t* 	addr;
-} label;
-
-label labels[512];
-int label_count = 0;
-
-uint64_t 	registers[NUM_REGS];
-
-#define sp registers[SP]
-#define pc registers[PC]
-
-#define push(arg) ((*(uint64_t*)(sp -= WORD_BYTES)) = arg)
-#define pop() (sp += WORD_BYTES, (*(uint64_t*)(sp - WORD_BYTES)))
-
-int 		executing = 1;
-
-void exec();
-void branch(WORD new_addr);
-
-//forward declarations
-uint64_t 	match(char* s);
-int 		interpret(char* file);
-
-void 	printInstr(WORD instr);
-void 	printStack();
-void 	printRegs();
-
-void setFlags(int argc, char* argv[]);
+#include "funcs.h"
+#include "globals.h"
 
 int main(int argc, char* argv[]) {
 	setFlags(argc, argv);
@@ -76,7 +14,7 @@ int main(int argc, char* argv[]) {
 	}
 	sp = STACK_TOP;
 	char c;
-	if(interpret(argv[1]) < 0) {
+	if(compile(argv[1]) < 0) {
 		return -1;
 	}
 	pc = (WORD)TEXT;
@@ -227,5 +165,3 @@ void setFlags(int argc, char* argv[]) {
 		MEM = 1;
 	}
 }
-
-#include "funcs.h"
